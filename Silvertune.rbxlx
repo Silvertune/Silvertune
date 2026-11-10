@@ -1,0 +1,1428 @@
+<roblox version="4">
+  <Item class="ReplicatedStorage" referent="RBX1">
+    <Properties>
+      <string name="Name">ReplicatedStorage</string>
+    </Properties>
+    <Item class="Folder" referent="RBX2">
+      <Properties>
+        <string name="Name">Shared</string>
+      </Properties>
+      <Item class="ModuleScript" referent="RBX3">
+        <Properties>
+          <string name="Name">Config</string>
+          <ProtectedString name="Source"><![CDATA[--!strict
+-- Minden hangolható érték egy helyen. Ide nyúlj először, ha változtatnál valamin.
+
+local Config = {}
+
+-- A lány (NPC) kinézete. Az asset ID-k a Roblox katalógusból (Marketplace) jönnek:
+-- a tárgy oldalának URL-jében lévő szám. 0 / "" = nincs beállítva (sima próbababa).
+Config.Companion = {
+	Name = "Lumi",
+	SkinColor = Color3.fromRGB(255, 226, 210),
+	DressColor = Color3.fromRGB(255, 170, 200),
+	LegColor = Color3.fromRGB(250, 250, 250),
+	HairAccessory = "", -- pl. "1234567,7654321" (vesszővel több is mehet)
+	Face = 0,
+	Shirt = 0,
+	Pants = 0,
+}
+
+-- Mozgás
+Config.PlayerWalkSpeed = 14
+Config.FollowSpeed = 10 -- amikor kedvesen követ
+Config.HuntSpeed = 13 -- amikor üldöz (legyen kicsit lassabb a játékosnál)
+Config.FollowDistance = 7 -- ennyire közelít meg követés közben
+Config.CatchDistance = 4 -- ennél közelebb elkap
+
+-- Üldözés
+Config.HuntGraceTime = 6 -- ennyi mp előnyt kapsz, mielőtt elindul
+Config.CalmDuration = 10 -- egy felhúzott zenedoboz ennyi időre megnyugtatja
+Config.CalmCooldown = 25 -- ennyi idő múlva húzható fel újra ugyanaz a doboz
+Config.CaughtSafeTime = 6 -- elkapás után ennyi ideig nem bánt
+
+Config.FirstPerson = true -- belső nézet (horrorhoz jobb); false = szabad kamera
+Config.EndingTime = 14 -- a zárókép hossza, utána újraindul a fejezet
+
+-- Hangok: "rbxassetid://SZÁM" formában. Üresen hagyva egyszerűen nem szól semmi.
+-- A Studio Toolbox > Audio fülén találsz ingyenes hangokat.
+Config.Sounds = {
+	MusicBox = "", -- a zenedoboz dallama (loopolva)
+	Ambience = "", -- halk háttérzaj az üldözés alatt
+	LightsOut = "", -- amikor lekapcsolnak a fények
+	Caught = "", -- amikor elkap
+	Pickup = "", -- tárgy felvétele
+}
+
+return Config
+]]></ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX4">
+        <Properties>
+          <string name="Name">Story</string>
+          <ProtectedString name="Source"><![CDATA[--!strict
+-- A fejezet összes szövege. A játék szövege angol (a Roblox közönsége nemzetközi),
+-- de itt bármit átírhatsz anélkül, hogy a logikához hozzányúlnál.
+-- Minden sor: { beszélő, szöveg }. Üres beszélő = narráció / gondolat.
+
+local Story = {}
+
+Story.Intro = {
+	{ "Lumi", "Oh! You're finally here! I've been waiting all day." },
+	{ "Lumi", "Come in, come in. Make yourself at home, okay?" },
+	{ "Lumi", "I was just about to make tea. Could you find the teacups for me?" },
+}
+
+Story.TeaReady = {
+	{ "Lumi", "Three cups! Perfect. Put them on the kitchen table, please." },
+}
+
+Story.TeaDone = {
+	{ "Lumi", "It's so nice to have a guest again." },
+	{ "Lumi", "The last one left without even saying goodbye. So rude." },
+	{ "Lumi", "Oh no... my plushies are all over the house. Help me find them?" },
+}
+
+Story.PlushiesDone = {
+	{ "Lumi", "You found them all! They really like you, I can tell." },
+	{ "Lumi", "You're staying for dinner, right?" },
+	{ "Lumi", "Everyone stays for dinner." },
+	{ "Lumi", "...Anyway! My music box is in the music room. Would you wind it up for me?" },
+}
+
+Story.MusicBoxWound = {
+	{ "Lumi", "Ahh, I love this tune. Don't let it stop, okay?" },
+	{ "", "Something is lying on the floor next to the pedestal." },
+}
+
+Story.Note = "Day 12.\n\nShe is kind as long as the tune plays.\nWhen it stops - run.\n\nThe front door key is in the room she never lets you enter.\nThe storage key is under her pillow.\n\nThe small music boxes calm her. Not for long."
+
+Story.HuntStart = {
+	{ "", "The music box winds down." },
+	{ "Lumi", "...It stopped." },
+	{ "Lumi", "You let it stop." },
+}
+
+-- Egysoros megjegyzések (nem állítják meg a játékot)
+Story.StorageLocked = { "Lumi", "Not that room! It's just storage. Nothing to see~" }
+Story.StorageLockedHunt = { "", "Locked. The note said the key is under her pillow." }
+Story.FrontDoorLocked = { "", "The front door is locked from the inside." }
+Story.GotStorageKey = { "", "A small key. This must open the storage room." }
+Story.StorageOpened = { "", "Rows of plushies. Each one has a name tag." }
+Story.GotFrontKey = { "", "The front door key. Go!" }
+Story.Calmed = { "Lumi", "Oh... that tune..." }
+Story.Caught = { "Lumi", "You dozed off, silly. You're not leaving already, are you?" }
+
+Story.Objectives = {
+	Welcome = "Listen to Lumi",
+	Cups = "Find the teacups (%d/%d)",
+	Table = "Put the cups on the kitchen table",
+	Plushies = "Find Lumi's plushies (%d/%d)",
+	MusicBox = "Wind up the music box in the music room",
+	Note = "Read the note",
+	StorageKey = "Find the storage key",
+	Storage = "Unlock the storage room",
+	FrontKey = "Find the front door key",
+	Escape = "Escape through the front door",
+}
+
+Story.Ending = {
+	Title = "You got out.",
+	Subtitle = "Chapter 1 complete - to be continued",
+}
+
+return Story
+]]></ProtectedString>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="ServerScriptService" referent="RBX5">
+    <Properties>
+      <string name="Name">ServerScriptService</string>
+    </Properties>
+    <Item class="Folder" referent="RBX6">
+      <Properties>
+        <string name="Name">Server</string>
+      </Properties>
+      <Item class="ModuleScript" referent="RBX7">
+        <Properties>
+          <string name="Name">Companion</string>
+          <ProtectedString name="Source"><![CDATA[--!nonstrict
+-- A lány (NPC): létrehozás, animáció és mozgás.
+-- Négy állapota van:
+--   Idle   - áll egy helyben
+--   Follow - kedvesen követi a legközelebbi játékost
+--   Hunt   - üldözi a legközelebbi játékost, és elkapja, ha odaér
+--   Calm   - megnyugodott (zenedoboz), egy ideig áll, aztán újra Hunt
+
+local Players = game:GetService("Players")
+local PathfindingService = game:GetService("PathfindingService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+-- A Roblox alap R15 animációi (minden játékban használhatók)
+local IDLE_ANIMATION = "rbxassetid://507766388"
+local WALK_ANIMATION = "rbxassetid://507777826"
+
+local STEP_INTERVAL = 0.15
+
+local Companion = {}
+Companion.__index = Companion
+
+-- Ha a rendes karakter valamiért nem tölthető be, egy egyszerű dobozfigura is megteszi.
+local function buildFallbackRig(): Model
+	local settings = Config.Companion
+	local model = Instance.new("Model")
+
+	local root = Instance.new("Part")
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2, 4, 1.5)
+	root.Color = settings.DressColor
+	root.TopSurface = Enum.SurfaceType.Smooth
+	root.BottomSurface = Enum.SurfaceType.Smooth
+	root.Parent = model
+
+	local head = Instance.new("Part")
+	head.Name = "Head"
+	head.Size = Vector3.new(1.6, 1.6, 1.6)
+	head.Color = settings.SkinColor
+	head.CanCollide = false
+	head.Massless = true
+	head.CFrame = root.CFrame * CFrame.new(0, 2.8, 0)
+	head.Parent = model
+
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = root
+	weld.Part1 = head
+	weld.Parent = root
+
+	local humanoid = Instance.new("Humanoid")
+	humanoid.RigType = Enum.HumanoidRigType.R15
+	humanoid.HipHeight = 1
+	humanoid.Parent = model
+
+	model.PrimaryPart = root
+	return model
+end
+
+local function buildRig(): Model
+	local settings = Config.Companion
+
+	local description = Instance.new("HumanoidDescription")
+	description.HeadColor = settings.SkinColor
+	description.LeftArmColor = settings.SkinColor
+	description.RightArmColor = settings.SkinColor
+	description.TorsoColor = settings.DressColor
+	description.LeftLegColor = settings.LegColor
+	description.RightLegColor = settings.LegColor
+	description.HairAccessory = settings.HairAccessory
+	description.Face = settings.Face
+	description.Shirt = settings.Shirt
+	description.Pants = settings.Pants
+
+	local ok, result = pcall(function()
+		return Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R15)
+	end)
+	if ok and result and result:FindFirstChildOfClass("Humanoid") and result:FindFirstChild("HumanoidRootPart") then
+		return result
+	end
+
+	warn("[Companion] A karakter betöltése nem sikerült, dobozfigurát használok:", result)
+	return buildFallbackRig()
+end
+
+function Companion.new(startCFrame: CFrame, parent: Instance)
+	local self = setmetatable({}, Companion)
+
+	local model = buildRig()
+	model.Name = Config.Companion.Name
+
+	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
+	local root = model:FindFirstChild("HumanoidRootPart") :: BasePart
+	humanoid.DisplayName = Config.Companion.Name
+
+	-- A gyári "Animate" szkript csak játékos-karakteren fut, itt magunk animálunk.
+	local animate = model:FindFirstChild("Animate")
+	if animate then
+		animate:Destroy()
+	end
+
+	model:PivotTo(startCFrame)
+	model.Parent = parent
+
+	-- A szerver mozgassa, ne egy közeli játékos gépe (különben csalható lenne).
+	pcall(function()
+		root:SetNetworkOwner(nil)
+	end)
+
+	self.model = model
+	self.humanoid = humanoid
+	self.root = root
+	self.mode = "Idle"
+	self.calmUntil = 0
+	self.alive = true
+	self.onCatch = nil :: ((Player) -> ())?
+	self.path = PathfindingService:CreatePath({
+		AgentRadius = 2,
+		AgentHeight = 5,
+		AgentCanJump = false,
+	})
+
+	self:_setupAnimations()
+
+	task.spawn(function()
+		while self.alive do
+			self:_step()
+			task.wait(STEP_INTERVAL)
+		end
+	end)
+
+	return self
+end
+
+function Companion:_setupAnimations()
+	local humanoid: Humanoid = self.humanoid
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
+
+	local function load(id: string, priority: Enum.AnimationPriority): AnimationTrack?
+		local animation = Instance.new("Animation")
+		animation.AnimationId = id
+		local ok, track = pcall(function()
+			return (animator :: Animator):LoadAnimation(animation)
+		end)
+		if ok and track then
+			track.Priority = priority
+			track.Looped = true
+			return track
+		end
+		return nil
+	end
+
+	local idle = load(IDLE_ANIMATION, Enum.AnimationPriority.Idle)
+	local walk = load(WALK_ANIMATION, Enum.AnimationPriority.Movement)
+	if idle then
+		idle:Play()
+	end
+
+	humanoid.Running:Connect(function(speed)
+		if not walk then
+			return
+		end
+		if speed > 0.5 then
+			if not walk.IsPlaying then
+				walk:Play(0.2)
+			end
+		elseif walk.IsPlaying then
+			walk:Stop(0.2)
+		end
+	end)
+end
+
+function Companion:setMode(mode: string)
+	self.mode = mode
+	if mode == "Follow" then
+		self.humanoid.WalkSpeed = Config.FollowSpeed
+	elseif mode == "Hunt" then
+		self.humanoid.WalkSpeed = Config.HuntSpeed
+	else
+		self:_stop()
+	end
+end
+
+-- Megnyugtatás: ennyi másodpercig áll, utána magától újra üldöz.
+function Companion:calm(seconds: number)
+	self.calmUntil = os.clock() + seconds
+	self:setMode("Calm")
+end
+
+function Companion:destroy()
+	self.alive = false
+	self.model:Destroy()
+end
+
+function Companion:_stop()
+	self.humanoid:MoveTo(self.root.Position)
+end
+
+-- A legközelebbi élő, nem védett játékos.
+function Companion:_nearestPlayer(): (Player?, Vector3?, number)
+	local bestPlayer, bestPosition, bestDistance = nil, nil, math.huge
+	local now = os.clock()
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+		local playerHumanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local safeUntil = player:GetAttribute("SafeUntil")
+		local isSafe = self.mode == "Hunt" and typeof(safeUntil) == "number" and safeUntil > now
+		if playerRoot and playerRoot:IsA("BasePart") and playerHumanoid and playerHumanoid.Health > 0 and not isSafe then
+			local distance = (playerRoot.Position - self.root.Position).Magnitude
+			if distance < bestDistance then
+				bestPlayer, bestPosition, bestDistance = player, playerRoot.Position, distance
+			end
+		end
+	end
+	return bestPlayer, bestPosition, bestDistance
+end
+
+-- Útvonalkeresés a falak körül: mindig a következő útpont felé indul.
+function Companion:_moveToward(goal: Vector3)
+	local path: Path = self.path
+	local origin = self.root.Position
+	local ok = pcall(function()
+		path:ComputeAsync(origin, goal)
+	end)
+
+	if ok and path.Status == Enum.PathStatus.Success then
+		local waypoints = path:GetWaypoints()
+		for i = 2, #waypoints do
+			if (waypoints[i].Position - origin).Magnitude > 3 then
+				self.humanoid:MoveTo(waypoints[i].Position)
+				return
+			end
+		end
+	end
+
+	-- Nincs útvonal (vagy már majdnem ott van): egyenesen a cél felé.
+	self.humanoid:MoveTo(goal)
+end
+
+function Companion:_step()
+	if self.mode == "Idle" then
+		return
+	end
+
+	if self.mode == "Calm" then
+		if os.clock() >= self.calmUntil then
+			self:setMode("Hunt")
+		end
+		return
+	end
+
+	local player, position, distance = self:_nearestPlayer()
+	if not player or not position then
+		self:_stop()
+		return
+	end
+
+	if self.mode == "Follow" then
+		if distance <= Config.FollowDistance then
+			self:_stop()
+			return
+		end
+	elseif self.mode == "Hunt" then
+		if distance <= Config.CatchDistance then
+			if self.onCatch then
+				self.onCatch(player)
+			end
+			return
+		end
+	end
+
+	self:_moveToward(position)
+end
+
+return Companion
+]]></ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX8">
+        <Properties>
+          <string name="Name">Director</string>
+          <ProtectedString name="Source"><![CDATA[--!nonstrict
+-- A "rendező": az első fejezet története fentről lefelé olvasható formában.
+-- A Director.run() addig fut, amíg a játékosok ki nem jutnak, utána visszatér,
+-- és a Main újraindítja a fejezetet.
+
+local Lighting = game:GetService("Lighting")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local Story = require(Shared:WaitForChild("Story"))
+
+local Director = {}
+
+type Line = { string }
+
+function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
+	local connections: { RBXScriptConnection } = {}
+	local sounds: { Sound } = {}
+	local currentObjective = ""
+	local hunting = false
+
+	local function track(connection: RBXScriptConnection)
+		table.insert(connections, connection)
+	end
+
+	---------------------------------------------------------------------------
+	-- Segédfüggvények
+	---------------------------------------------------------------------------
+
+	-- Hang lejátszása; ha nincs beállítva ID a Configban, nem csinál semmit.
+	local function playSound(id: string, parent: Instance, looped: boolean?): Sound?
+		if id == "" then
+			return nil
+		end
+		local sound = Instance.new("Sound")
+		sound.SoundId = id
+		sound.Looped = looped == true
+		sound.Parent = parent
+		sound:Play()
+		table.insert(sounds, sound)
+		return sound
+	end
+
+	-- Egy sor szöveg mindenkinek; megvárja, amíg el lehet olvasni.
+	local function say(line: Line)
+		local duration = 1.5 + #line[2] * 0.05
+		storyEvent:FireAllClients("Dialogue", { speaker = line[1], text = line[2], duration = duration })
+		task.wait(duration + 0.3)
+	end
+
+	local function sayAll(lines: { Line })
+		for _, line in lines do
+			say(line)
+		end
+	end
+
+	-- Megjegyzés, ami nem állítja meg a történetet (egy játékosnak vagy mindenkinek).
+	local function remark(line: Line, player: Player?)
+		local payload = { speaker = line[1], text = line[2], duration = 3.5 }
+		if player then
+			storyEvent:FireClient(player, "Dialogue", payload)
+		else
+			storyEvent:FireAllClients("Dialogue", payload)
+		end
+	end
+
+	local function setObjective(text: string)
+		currentObjective = text
+		storyEvent:FireAllClients("Objective", text)
+	end
+
+	local function getPrompt(part: Instance): ProximityPrompt
+		return part:FindFirstChildOfClass("ProximityPrompt") :: ProximityPrompt
+	end
+
+	-- Megvárja, amíg valaki használja a tárgyat, és visszaadja, hogy ki volt az.
+	local function waitForUse(part: Instance): Player
+		local prompt = getPrompt(part)
+		prompt.Enabled = true
+		local player = prompt.Triggered:Wait()
+		prompt.Enabled = false
+		return player
+	end
+
+	-- Megvárja, amíg az összes tárgyat összeszedik; közben számolja a célkiírásban.
+	local function collectAll(items: { Part }, objectiveFormat: string)
+		local total = #items
+		local count = 0
+		local finished = Instance.new("BindableEvent")
+		setObjective(string.format(objectiveFormat, count, total))
+
+		for _, item in items do
+			local prompt = getPrompt(item)
+			prompt.Enabled = true
+			prompt.Triggered:Once(function()
+				count += 1
+				playSound(Config.Sounds.Pickup, map.folder)
+				item:Destroy()
+				setObjective(string.format(objectiveFormat, count, total))
+				if count >= total then
+					finished:Fire()
+				end
+			end)
+		end
+
+		finished.Event:Wait()
+		finished:Destroy()
+	end
+
+	local function flicker(lamp: any, times: number)
+		task.spawn(function()
+			for _ = 1, times do
+				lamp.light.Enabled = false
+				task.wait(0.08 + math.random() * 0.15)
+				lamp.light.Enabled = true
+				task.wait(0.05 + math.random() * 0.2)
+			end
+		end)
+	end
+
+	local function setCozyLighting()
+		Lighting.ClockTime = 0
+		Lighting.Brightness = 1
+		Lighting.Ambient = Color3.fromRGB(80, 70, 78)
+		Lighting.OutdoorAmbient = Color3.fromRGB(30, 30, 45)
+		Lighting.FogEnd = 100000
+	end
+
+	local function setDarkLighting()
+		Lighting.Ambient = Color3.fromRGB(10, 10, 16)
+		Lighting.OutdoorAmbient = Color3.fromRGB(5, 5, 10)
+		Lighting.FogColor = Color3.fromRGB(0, 0, 0)
+		Lighting.FogEnd = 70
+		for _, lamp in map.lamps do
+			lamp.light.Brightness = 0.25
+			lamp.light.Color = Color3.fromRGB(255, 70, 90)
+			lamp.part.Color = Color3.fromRGB(120, 30, 45)
+		end
+	end
+
+	-- Zseblámpa-szerű fény a játékoson az üldözés alatt.
+	local function giveLight(character: Model)
+		local root = character:WaitForChild("HumanoidRootPart", 5)
+		if root and not root:FindFirstChild("HuntLight") then
+			local light = Instance.new("PointLight")
+			light.Name = "HuntLight"
+			light.Range = 20
+			light.Brightness = 1
+			light.Color = Color3.fromRGB(230, 235, 255)
+			light.Parent = root
+		end
+	end
+
+	local function setupCharacter(player: Player, character: Model)
+		local humanoid = character:WaitForChild("Humanoid", 5)
+		if humanoid and humanoid:IsA("Humanoid") then
+			humanoid.WalkSpeed = Config.PlayerWalkSpeed
+		end
+		if hunting then
+			giveLight(character)
+		end
+	end
+
+	local function setupPlayer(player: Player)
+		player.CameraMode = if Config.FirstPerson then Enum.CameraMode.LockFirstPerson else Enum.CameraMode.Classic
+		player:SetAttribute("SafeUntil", 0)
+		track(player.CharacterAdded:Connect(function(character)
+			setupCharacter(player, character)
+		end))
+		if player.Character then
+			setupCharacter(player, player.Character)
+		end
+		-- Aki később csatlakozik, az is lássa az aktuális célt.
+		if currentObjective ~= "" then
+			storyEvent:FireClient(player, "Objective", currentObjective)
+		end
+	end
+
+	---------------------------------------------------------------------------
+	-- Előkészítés
+	---------------------------------------------------------------------------
+
+	setCozyLighting()
+
+	for _, player in Players:GetPlayers() do
+		setupPlayer(player)
+	end
+	track(Players.PlayerAdded:Connect(setupPlayer))
+
+	-- Megvárjuk az első játékost és a karakterét.
+	while #Players:GetPlayers() == 0 do
+		Players.PlayerAdded:Wait()
+	end
+	local firstPlayer = Players:GetPlayers()[1]
+	if firstPlayer and not firstPlayer.Character then
+		firstPlayer.CharacterAdded:Wait()
+	end
+	task.wait(2)
+
+	---------------------------------------------------------------------------
+	-- 1. Érkezés
+	---------------------------------------------------------------------------
+
+	setObjective(Story.Objectives.Welcome)
+	sayAll(Story.Intro)
+
+	-- A raktár ajtaja végig megnyomható; hogy mi történik, az a történet állásától függ.
+	local hasStorageKey = false
+	local lastStorageRemark = 0
+	local storagePrompt = getPrompt(map.storageDoor)
+	storagePrompt.Enabled = true
+	track(storagePrompt.Triggered:Connect(function(player)
+		if hasStorageKey then
+			storagePrompt.Enabled = false
+			map.storageDoor.CanCollide = false
+			map.storageDoor.Transparency = 1
+			remark(Story.StorageOpened)
+			setObjective(Story.Objectives.FrontKey)
+		elseif os.clock() - lastStorageRemark > 4 then
+			lastStorageRemark = os.clock()
+			remark(if hunting then Story.StorageLockedHunt else Story.StorageLocked, player)
+		end
+	end))
+
+	---------------------------------------------------------------------------
+	-- 2. Teázás
+	---------------------------------------------------------------------------
+
+	companion:setMode("Follow")
+	collectAll(map.cups, Story.Objectives.Cups)
+	sayAll(Story.TeaReady)
+
+	setObjective(Story.Objectives.Table)
+	waitForUse(map.kitchenTable)
+	flicker(map.lamps[3], 4) -- a konyhai lámpa megrebben: az első furcsaság
+	sayAll(Story.TeaDone)
+
+	---------------------------------------------------------------------------
+	-- 3. Plüssök
+	---------------------------------------------------------------------------
+
+	collectAll(map.plushies, Story.Objectives.Plushies)
+	for _, lamp in map.lamps do
+		flicker(lamp, 3)
+	end
+	storyEvent:FireAllClients("Effect", "Glitch")
+	sayAll(Story.PlushiesDone)
+
+	---------------------------------------------------------------------------
+	-- 4. A zenedoboz
+	---------------------------------------------------------------------------
+
+	setObjective(Story.Objectives.MusicBox)
+	waitForUse(map.musicBox)
+	local tune = playSound(Config.Sounds.MusicBox, map.musicBox, true)
+	sayAll(Story.MusicBoxWound)
+
+	map.note.Transparency = 0
+	setObjective(Story.Objectives.Note)
+	local reader = waitForUse(map.note)
+	storyEvent:FireClient(reader, "Note", Story.Note)
+	-- A cetli utána is újraolvasható.
+	local notePrompt = getPrompt(map.note)
+	notePrompt.Enabled = true
+	track(notePrompt.Triggered:Connect(function(player)
+		storyEvent:FireClient(player, "Note", Story.Note)
+	end))
+	task.wait(8)
+
+	---------------------------------------------------------------------------
+	-- 5. Üldözés és szökés
+	---------------------------------------------------------------------------
+
+	companion:setMode("Idle")
+	if tune then
+		tune:Stop()
+	end
+	say(Story.HuntStart[1])
+
+	hunting = true
+	setDarkLighting()
+	playSound(Config.Sounds.LightsOut, map.folder)
+	playSound(Config.Sounds.Ambience, map.folder, true)
+	storyEvent:FireAllClients("Effect", "Glitch")
+	for _, player in Players:GetPlayers() do
+		if player.Character then
+			giveLight(player.Character)
+		end
+	end
+
+	say(Story.HuntStart[2])
+	say(Story.HuntStart[3])
+
+	local escaped = Instance.new("BindableEvent")
+	local hasFrontKey = false
+
+	-- Ha elkap: nem halsz meg, csak "felébredsz" az előszobában.
+	companion.onCatch = function(player: Player)
+		player:SetAttribute("SafeUntil", os.clock() + Config.CaughtSafeTime)
+		playSound(Config.Sounds.Caught, map.folder)
+		storyEvent:FireClient(player, "Effect", "Caught")
+		companion:calm(3)
+		task.delay(0.5, function()
+			local character = player.Character
+			if character then
+				character:PivotTo(map.spawn.CFrame + Vector3.new(0, 4, 0))
+			end
+			remark(Story.Caught, player)
+		end)
+	end
+
+	-- Kis zenedobozok: megnyugtatják, de utána egy ideig nem húzhatók fel újra.
+	for _, calmBox in map.calmBoxes do
+		local prompt = getPrompt(calmBox)
+		prompt.Enabled = true
+		track(prompt.Triggered:Connect(function()
+			prompt.Enabled = false
+			companion:calm(Config.CalmDuration)
+			remark(Story.Calmed)
+			local chime = playSound(Config.Sounds.MusicBox, calmBox, false)
+			task.delay(Config.CalmDuration, function()
+				if chime then
+					chime:Stop()
+				end
+			end)
+			task.delay(Config.CalmCooldown, function()
+				if hunting then
+					prompt.Enabled = true
+				end
+			end)
+		end))
+	end
+
+	-- Raktárkulcs a párna alatt
+	setObjective(Story.Objectives.StorageKey)
+	local pillowPrompt = getPrompt(map.pillow)
+	pillowPrompt.Enabled = true
+	track(pillowPrompt.Triggered:Connect(function()
+		pillowPrompt.Enabled = false
+		hasStorageKey = true
+		playSound(Config.Sounds.Pickup, map.folder)
+		remark(Story.GotStorageKey)
+		setObjective(Story.Objectives.Storage)
+	end))
+
+	-- Bejárati kulcs a raktárban
+	local keyPrompt = getPrompt(map.frontDoorKey)
+	keyPrompt.Enabled = true
+	track(keyPrompt.Triggered:Connect(function()
+		hasFrontKey = true
+		playSound(Config.Sounds.Pickup, map.folder)
+		map.frontDoorKey:Destroy()
+		remark(Story.GotFrontKey)
+		setObjective(Story.Objectives.Escape)
+	end))
+
+	-- Bejárati ajtó
+	local frontPrompt = getPrompt(map.frontDoor)
+	frontPrompt.Enabled = true
+	track(frontPrompt.Triggered:Connect(function(player)
+		if hasFrontKey then
+			frontPrompt.Enabled = false
+			escaped:Fire()
+		else
+			remark(Story.FrontDoorLocked, player)
+		end
+	end))
+
+	companion:calm(Config.HuntGraceTime) -- rövid előny, utána magától üldözni kezd
+
+	escaped.Event:Wait()
+	escaped:Destroy()
+
+	---------------------------------------------------------------------------
+	-- Vége
+	---------------------------------------------------------------------------
+
+	hunting = false
+	companion.onCatch = nil
+	companion:setMode("Idle")
+	map.frontDoor.CanCollide = false
+	map.frontDoor.Transparency = 1
+	setObjective("")
+	storyEvent:FireAllClients("Ending", Story.Ending)
+	task.wait(Config.EndingTime)
+
+	for _, connection in connections do
+		connection:Disconnect()
+	end
+	for _, sound in sounds do
+		sound:Destroy()
+	end
+end
+
+return Director
+]]></ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="Script" referent="RBX9">
+        <Properties>
+          <string name="Name">Main</string>
+          <ProtectedString name="Source"><![CDATA[--!strict
+-- Belépési pont a szerveren: felépíti a pályát, létrehozza a lányt, lejátssza
+-- a fejezetet, majd mindent töröl és elölről kezdi.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local MapBuilder = require(script.Parent:WaitForChild("MapBuilder"))
+local Companion = require(script.Parent:WaitForChild("Companion"))
+local Director = require(script.Parent:WaitForChild("Director"))
+
+-- Ezen az egy csatornán küld a szerver mindent a klienseknek (szöveg, cél, effektek).
+local storyEvent = Instance.new("RemoteEvent")
+storyEvent.Name = "StoryEvent"
+storyEvent.Parent = ReplicatedStorage
+
+while true do
+	local map = MapBuilder.build()
+	local companion = Companion.new(map.companionStart, map.folder)
+
+	-- Mindenki friss karakterrel indul az előszobában.
+	for _, player in Players:GetPlayers() do
+		task.spawn(function()
+			player:LoadCharacter()
+		end)
+	end
+	storyEvent:FireAllClients("Reset")
+
+	local ok, problem = pcall(Director.run, map, companion, storyEvent)
+	if not ok then
+		warn("[Main] Hiba a fejezet futása közben:", problem)
+		task.wait(5)
+	end
+
+	companion:destroy()
+	map.folder:Destroy()
+end
+]]></ProtectedString>
+        </Properties>
+      </Item>
+      <Item class="ModuleScript" referent="RBX10">
+        <Properties>
+          <string name="Name">MapBuilder</string>
+          <ProtectedString name="Source"><![CDATA[--!strict
+-- Felépíti a házat egyszerű dobozokból ("greybox"). Ez helykitöltő pálya:
+-- arra való, hogy a játékmenet kipróbálható legyen, később Studióban
+-- lecserélhető rendes modellekre.
+--
+-- Alaprajz felülnézetből (x: nyugat -> kelet, z: észak -> dél), 80 x 60 stud:
+--
+--   +-----------+-----------+-----------+  z = -30
+--   | Hálószoba |  Raktár   | Zeneszoba |
+--   +---  ------+--[ajtó]---+------  ---+  z = -5
+--   |              Folyosó              |
+--   +---  ------+--       --+------  ---+  z = 5
+--   |  Nappali  |  Előszoba |   Konyha  |
+--   +-----------+-[bejárat]-+-----------+  z = 30
+--  x = -40     -12          12          40
+
+local Workspace = game:GetService("Workspace")
+
+local MapBuilder = {}
+
+local WALL_HEIGHT = 10
+local WALL_THICKNESS = 1
+
+local WALL_COLOR = Color3.fromRGB(245, 225, 220)
+local FLOOR_COLOR = Color3.fromRGB(170, 120, 90)
+local FURNITURE_COLOR = Color3.fromRGB(215, 190, 170)
+local LAMP_COLOR = Color3.fromRGB(255, 220, 170)
+
+export type Lamp = { part: Part, light: PointLight }
+
+export type Map = {
+	folder: Folder,
+	spawn: SpawnLocation,
+	companionStart: CFrame,
+	lamps: { Lamp },
+	cups: { Part },
+	plushies: { Part },
+	kitchenTable: Part,
+	musicBox: Part,
+	note: Part,
+	pillow: Part,
+	storageDoor: Part,
+	frontDoorKey: Part,
+	frontDoor: Part,
+	calmBoxes: { Part },
+}
+
+local function box(parent: Instance, name: string, size: Vector3, position: Vector3, color: Color3, material: Enum.Material?): Part
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Anchored = true
+	part.Size = size
+	part.Position = position
+	part.Color = color
+	part.Material = material or Enum.Material.SmoothPlastic
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.Parent = parent
+	return part
+end
+
+-- Tengelyirányú fal két pont között (vagy x1 == x2, vagy z1 == z2).
+local function wall(parent: Instance, x1: number, z1: number, x2: number, z2: number)
+	local size
+	if z1 == z2 then
+		size = Vector3.new(math.abs(x2 - x1), WALL_HEIGHT, WALL_THICKNESS)
+	else
+		size = Vector3.new(WALL_THICKNESS, WALL_HEIGHT, math.abs(z2 - z1))
+	end
+	local position = Vector3.new((x1 + x2) / 2, WALL_HEIGHT / 2, (z1 + z2) / 2)
+	box(parent, "Wall", size, position, WALL_COLOR)
+end
+
+-- "E" gombos interakció egy tárgyon. Alapból kikapcsolva; a Director kapcsolja be,
+-- amikor a történetben sorra kerül.
+local function addPrompt(part: Part, actionText: string, objectText: string): ProximityPrompt
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = actionText
+	prompt.ObjectText = objectText
+	prompt.HoldDuration = 0.3
+	prompt.MaxActivationDistance = 8
+	prompt.RequiresLineOfSight = false
+	prompt.Enabled = false
+	prompt.Parent = part
+	return prompt
+end
+
+local function lamp(parent: Instance, x: number, z: number): Lamp
+	local part = box(parent, "Lamp", Vector3.new(2, 0.5, 2), Vector3.new(x, WALL_HEIGHT - 0.25, z), LAMP_COLOR, Enum.Material.Neon)
+	part.CanCollide = false
+	local light = Instance.new("PointLight")
+	light.Range = 30
+	light.Brightness = 1.2
+	light.Color = LAMP_COLOR
+	light.Parent = part
+	return { part = part, light = light }
+end
+
+local function plushie(parent: Instance, position: Vector3, color: Color3): Part
+	local body = box(parent, "Plushie", Vector3.new(1.5, 2, 1.5), position, color, Enum.Material.Fabric)
+	local head = box(body, "Head", Vector3.new(1.2, 1.2, 1.2), position + Vector3.new(0, 1.5, 0), color, Enum.Material.Fabric)
+	head.CanCollide = false
+	return body
+end
+
+function MapBuilder.build(): Map
+	local folder = Instance.new("Folder")
+	folder.Name = "Map"
+
+	local structure = Instance.new("Folder")
+	structure.Name = "Structure"
+	structure.Parent = folder
+
+	-- Talaj, padló, plafon
+	box(structure, "Ground", Vector3.new(400, 1, 400), Vector3.new(0, -1.5, 0), Color3.fromRGB(30, 45, 35), Enum.Material.Grass)
+	box(structure, "Floor", Vector3.new(80, 1, 60), Vector3.new(0, -0.5, 0), FLOOR_COLOR, Enum.Material.WoodPlanks)
+	box(structure, "Ceiling", Vector3.new(80, 1, 60), Vector3.new(0, WALL_HEIGHT + 0.5, 0), WALL_COLOR)
+
+	-- Külső falak (a déli falon a bejárati ajtó helye kimarad)
+	wall(structure, -40, -30, 40, -30)
+	wall(structure, -40, -30, -40, 30)
+	wall(structure, 40, -30, 40, 30)
+	wall(structure, -40, 30, -4, 30)
+	wall(structure, 4, 30, 40, 30)
+
+	-- A folyosó északi fala (ajtónyílások: hálószoba, raktár, zeneszoba)
+	wall(structure, -40, -5, -30, -5)
+	wall(structure, -22, -5, -4, -5)
+	wall(structure, 4, -5, 22, -5)
+	wall(structure, 30, -5, 40, -5)
+
+	-- A folyosó déli fala (ajtónyílások: nappali, előszoba, konyha)
+	wall(structure, -40, 5, -30, 5)
+	wall(structure, -22, 5, -7, 5)
+	wall(structure, 7, 5, 22, 5)
+	wall(structure, 30, 5, 40, 5)
+
+	-- Szobák közti válaszfalak
+	wall(structure, -12, -30, -12, -5)
+	wall(structure, 12, -30, 12, -5)
+	wall(structure, -12, 5, -12, 30)
+	wall(structure, 12, 5, 12, 30)
+
+	-- Lámpák: szobánként egy, a folyosón kettő
+	local lamps = {
+		lamp(structure, 0, 17),
+		lamp(structure, -26, 17),
+		lamp(structure, 26, 17),
+		lamp(structure, -26, -17),
+		lamp(structure, 0, -17),
+		lamp(structure, 26, -17),
+		lamp(structure, -20, 0),
+		lamp(structure, 20, 0),
+	}
+
+	-- Kezdőpont az előszobában
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "Spawn"
+	spawn.Anchored = true
+	spawn.Neutral = true
+	spawn.Size = Vector3.new(6, 1, 6)
+	spawn.Position = Vector3.new(0, -0.4, 22)
+	spawn.Transparency = 1
+	spawn.CanCollide = false
+	spawn.TopSurface = Enum.SurfaceType.Smooth
+	spawn.Parent = folder
+
+	local props = Instance.new("Folder")
+	props.Name = "Props"
+	props.Parent = folder
+
+	-- Bútorok
+	box(props, "KitchenCounter", Vector3.new(3, 3, 20), Vector3.new(37.5, 1.5, 17), FURNITURE_COLOR)
+	local kitchenTable = box(props, "KitchenTable", Vector3.new(6, 3, 4), Vector3.new(24, 1.5, 18), FURNITURE_COLOR, Enum.Material.Wood)
+	addPrompt(kitchenTable, "Set the table", "Kitchen table")
+
+	box(props, "Sofa", Vector3.new(4, 3, 10), Vector3.new(-36, 1.5, 18), Color3.fromRGB(200, 150, 170), Enum.Material.Fabric)
+	box(props, "CoffeeTable", Vector3.new(6, 2, 4), Vector3.new(-26, 1, 18), FURNITURE_COLOR, Enum.Material.Wood)
+
+	box(props, "Bed", Vector3.new(8, 2, 12), Vector3.new(-30, 1, -22), Color3.fromRGB(255, 200, 215), Enum.Material.Fabric)
+	box(props, "Nightstand", Vector3.new(3, 2, 3), Vector3.new(-37, 1, -27), FURNITURE_COLOR, Enum.Material.Wood)
+	local pillow = box(props, "Pillow", Vector3.new(5, 0.8, 2.5), Vector3.new(-30, 2.4, -26.5), Color3.fromRGB(255, 255, 255), Enum.Material.Fabric)
+	addPrompt(pillow, "Look under", "Pillow")
+
+	-- Teáscsészék
+	local cups = {}
+	for _, position in { Vector3.new(37, 3.5, 12), Vector3.new(-26, 2.5, 18), Vector3.new(-37, 2.5, -27) } do
+		local cup = box(props, "Teacup", Vector3.new(0.8, 1, 0.8), position, Color3.fromRGB(255, 255, 255))
+		addPrompt(cup, "Take", "Teacup")
+		table.insert(cups, cup)
+	end
+
+	-- Plüssök
+	local plushies = {}
+	local plushieSpots = {
+		{ Vector3.new(-37, 1, 27), Color3.fromRGB(255, 180, 200) },
+		{ Vector3.new(15, 1, 27), Color3.fromRGB(180, 210, 255) },
+		{ Vector3.new(-15, 1, -8), Color3.fromRGB(255, 240, 170) },
+		{ Vector3.new(38, 1, 0), Color3.fromRGB(200, 255, 200) },
+	}
+	for _, spot in plushieSpots do
+		local plush = plushie(props, spot[1], spot[2])
+		addPrompt(plush, "Pick up", "Plushie")
+		table.insert(plushies, plush)
+	end
+
+	-- Zeneszoba: talapzat, ezüst zenedoboz, és a (még láthatatlan) cetli
+	box(props, "Pedestal", Vector3.new(3, 3, 3), Vector3.new(26, 1.5, -22), Color3.fromRGB(240, 240, 245))
+	local musicBox = box(props, "MusicBox", Vector3.new(2, 1, 1.5), Vector3.new(26, 3.5, -22), Color3.fromRGB(200, 205, 215), Enum.Material.Metal)
+	addPrompt(musicBox, "Wind up", "Silver music box")
+
+	local note = box(props, "Note", Vector3.new(1.5, 0.1, 2), Vector3.new(22, 0.05, -20), Color3.fromRGB(240, 235, 210))
+	note.Transparency = 1
+	note.CanCollide = false
+	addPrompt(note, "Read", "Crumpled note")
+
+	-- Raktár: zárt ajtó, mögötte névcédulás plüssök és a bejárati kulcs
+	local storageDoor = box(props, "StorageDoor", Vector3.new(8, WALL_HEIGHT, 1), Vector3.new(0, WALL_HEIGHT / 2, -5), Color3.fromRGB(120, 80, 60), Enum.Material.Wood)
+	addPrompt(storageDoor, "Open", "Storage room")
+
+	local pastel = {
+		Color3.fromRGB(255, 180, 200),
+		Color3.fromRGB(180, 210, 255),
+		Color3.fromRGB(255, 240, 170),
+		Color3.fromRGB(200, 255, 200),
+		Color3.fromRGB(220, 190, 255),
+	}
+	local index = 0
+	for x = -9, 9, 4.5 do
+		for z = -22, -10, 4 do
+			if not (x == 0 and z == -22) then
+				index += 1
+				plushie(props, Vector3.new(x, 1, z), pastel[index % #pastel + 1])
+			end
+		end
+	end
+
+	box(props, "Shelf", Vector3.new(4, 1, 2), Vector3.new(0, 0.5, -27), FURNITURE_COLOR, Enum.Material.Wood)
+	local frontDoorKey = box(props, "FrontDoorKey", Vector3.new(0.4, 0.4, 1.2), Vector3.new(0, 1.3, -27), Color3.fromRGB(255, 215, 90), Enum.Material.Neon)
+	addPrompt(frontDoorKey, "Take", "Front door key")
+
+	-- Bejárati ajtó
+	local frontDoor = box(props, "FrontDoor", Vector3.new(8, WALL_HEIGHT, 1), Vector3.new(0, WALL_HEIGHT / 2, 30), Color3.fromRGB(120, 80, 60), Enum.Material.Wood)
+	addPrompt(frontDoor, "Open", "Front door")
+
+	-- Kis zenedobozok, amikkel az üldözés alatt meg lehet nyugtatni
+	local calmBoxes = {}
+	for _, position in { Vector3.new(-38, 0, 0), Vector3.new(10, 0, 28) } do
+		box(props, "Stool", Vector3.new(2, 2, 2), position + Vector3.new(0, 1, 0), FURNITURE_COLOR, Enum.Material.Wood)
+		local calmBox = box(props, "SmallMusicBox", Vector3.new(1.2, 0.8, 1), position + Vector3.new(0, 2.4, 0), Color3.fromRGB(200, 205, 215), Enum.Material.Metal)
+		addPrompt(calmBox, "Wind up", "Small music box")
+		table.insert(calmBoxes, calmBox)
+	end
+
+	folder.Parent = Workspace
+
+	return {
+		folder = folder,
+		spawn = spawn,
+		companionStart = CFrame.lookAt(Vector3.new(0, 3, 10), Vector3.new(0, 3, 22)),
+		lamps = lamps,
+		cups = cups,
+		plushies = plushies,
+		kitchenTable = kitchenTable,
+		musicBox = musicBox,
+		note = note,
+		pillow = pillow,
+		storageDoor = storageDoor,
+		frontDoorKey = frontDoorKey,
+		frontDoor = frontDoor,
+		calmBoxes = calmBoxes,
+	}
+end
+
+return MapBuilder
+]]></ProtectedString>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="StarterPlayer" referent="RBX11">
+    <Properties>
+      <string name="Name">StarterPlayer</string>
+    </Properties>
+    <Item class="StarterPlayerScripts" referent="RBX12">
+      <Properties>
+        <string name="Name">StarterPlayerScripts</string>
+      </Properties>
+      <Item class="Folder" referent="RBX13">
+        <Properties>
+          <string name="Name">Client</string>
+        </Properties>
+        <Item class="LocalScript" referent="RBX14">
+          <Properties>
+            <string name="Name">Main</string>
+            <ProtectedString name="Source"><![CDATA[--!strict
+-- Kliens oldal: minden, amit a játékos a képernyőn lát.
+-- Feliratok, aktuális cél, cetli, elsötétülés, záróképernyő.
+-- A szervertől a "StoryEvent" csatornán kapja, hogy mit mutasson.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local storyEvent = ReplicatedStorage:WaitForChild("StoryEvent") :: RemoteEvent
+
+local FONT = Enum.Font.GothamMedium
+local PINK = Color3.fromRGB(255, 170, 200)
+
+-------------------------------------------------------------------------------
+-- Felület felépítése
+-------------------------------------------------------------------------------
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "StoryGui"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = playerGui
+
+local function label(parent: Instance, name: string, textSize: number): TextLabel
+	local text = Instance.new("TextLabel")
+	text.Name = name
+	text.BackgroundTransparency = 1
+	text.Font = FONT
+	text.TextSize = textSize
+	text.TextColor3 = Color3.fromRGB(255, 255, 255)
+	text.TextWrapped = true
+	text.Text = ""
+	text.Parent = parent
+	return text
+end
+
+local function roundCorners(parent: Instance, radius: number)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius)
+	corner.Parent = parent
+end
+
+-- Aktuális cél (bal felül)
+local objective = label(gui, "Objective", 20)
+objective.AnchorPoint = Vector2.new(0, 0)
+objective.Position = UDim2.new(0, 20, 0, 60)
+objective.Size = UDim2.new(0.5, 0, 0, 30)
+objective.TextXAlignment = Enum.TextXAlignment.Left
+objective.TextStrokeTransparency = 0.5
+
+-- Párbeszéddoboz (alul középen)
+local dialogue = Instance.new("Frame")
+dialogue.Name = "Dialogue"
+dialogue.AnchorPoint = Vector2.new(0.5, 1)
+dialogue.Position = UDim2.new(0.5, 0, 1, -40)
+dialogue.Size = UDim2.new(0.7, 0, 0, 110)
+dialogue.BackgroundColor3 = Color3.fromRGB(20, 16, 22)
+dialogue.BackgroundTransparency = 0.25
+dialogue.Visible = false
+dialogue.Parent = gui
+roundCorners(dialogue, 12)
+
+local speaker = label(dialogue, "Speaker", 20)
+speaker.Position = UDim2.new(0, 18, 0, 10)
+speaker.Size = UDim2.new(1, -36, 0, 24)
+speaker.TextXAlignment = Enum.TextXAlignment.Left
+speaker.TextColor3 = PINK
+speaker.Font = Enum.Font.GothamBold
+
+local line = label(dialogue, "Line", 22)
+line.Position = UDim2.new(0, 18, 0, 38)
+line.Size = UDim2.new(1, -36, 1, -48)
+line.TextXAlignment = Enum.TextXAlignment.Left
+line.TextYAlignment = Enum.TextYAlignment.Top
+
+-- Cetli (középen, bezárható)
+local note = Instance.new("Frame")
+note.Name = "Note"
+note.AnchorPoint = Vector2.new(0.5, 0.5)
+note.Position = UDim2.new(0.5, 0, 0.5, 0)
+note.Size = UDim2.new(0, 420, 0, 380)
+note.BackgroundColor3 = Color3.fromRGB(240, 235, 210)
+note.Visible = false
+note.Parent = gui
+roundCorners(note, 6)
+
+local noteText = label(note, "Text", 20)
+noteText.Position = UDim2.new(0, 24, 0, 24)
+noteText.Size = UDim2.new(1, -48, 1, -90)
+noteText.TextColor3 = Color3.fromRGB(50, 40, 40)
+noteText.Font = Enum.Font.IndieFlower
+noteText.TextSize = 24
+noteText.TextXAlignment = Enum.TextXAlignment.Left
+noteText.TextYAlignment = Enum.TextYAlignment.Top
+
+local closeNote = Instance.new("TextButton")
+closeNote.Name = "Close"
+closeNote.AnchorPoint = Vector2.new(0.5, 1)
+closeNote.Position = UDim2.new(0.5, 0, 1, -16)
+closeNote.Size = UDim2.new(0, 140, 0, 40)
+closeNote.BackgroundColor3 = Color3.fromRGB(60, 50, 50)
+closeNote.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeNote.Font = FONT
+closeNote.TextSize = 20
+closeNote.Text = "Close"
+closeNote.Parent = note
+roundCorners(closeNote, 8)
+closeNote.Activated:Connect(function()
+	note.Visible = false
+end)
+
+-- Teljes képernyős réteg: elsötétüléshez, villanáshoz, záróképhez
+local overlay = Instance.new("Frame")
+overlay.Name = "Overlay"
+overlay.Size = UDim2.new(1, 0, 1, 0)
+overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+overlay.BackgroundTransparency = 1
+overlay.ZIndex = 10
+overlay.Parent = gui
+
+local endingTitle = label(overlay, "Title", 48)
+endingTitle.AnchorPoint = Vector2.new(0.5, 0.5)
+endingTitle.Position = UDim2.new(0.5, 0, 0.45, 0)
+endingTitle.Size = UDim2.new(0.8, 0, 0, 60)
+endingTitle.Font = Enum.Font.GothamBold
+endingTitle.TextTransparency = 1
+endingTitle.ZIndex = 11
+
+local endingSubtitle = label(overlay, "Subtitle", 24)
+endingSubtitle.AnchorPoint = Vector2.new(0.5, 0.5)
+endingSubtitle.Position = UDim2.new(0.5, 0, 0.55, 0)
+endingSubtitle.Size = UDim2.new(0.8, 0, 0, 40)
+endingSubtitle.TextColor3 = PINK
+endingSubtitle.TextTransparency = 1
+endingSubtitle.ZIndex = 11
+
+-------------------------------------------------------------------------------
+-- Működés
+-------------------------------------------------------------------------------
+
+local function tween(instance: Instance, seconds: number, goal: { [string]: any })
+	local animation = TweenService:Create(instance, TweenInfo.new(seconds), goal)
+	animation:Play()
+	return animation
+end
+
+-- Minden új sor megszakítja az előzőt: ezzel a számlálóval tudjuk, melyik az aktuális.
+local dialogueToken = 0
+
+local function showDialogue(payload: { speaker: string, text: string, duration: number })
+	dialogueToken += 1
+	local token = dialogueToken
+
+	speaker.Text = payload.speaker
+	line.Text = payload.text
+	line.Font = if payload.speaker == "" then Enum.Font.GothamMedium else FONT
+	line.TextColor3 = if payload.speaker == "" then Color3.fromRGB(200, 200, 210) else Color3.fromRGB(255, 255, 255)
+	dialogue.Visible = true
+
+	-- Írógép-effekt: betűnként jelenik meg.
+	local length = utf8.len(payload.text) or #payload.text
+	line.MaxVisibleGraphemes = 0
+	for shown = 1, length do
+		if dialogueToken ~= token then
+			return
+		end
+		line.MaxVisibleGraphemes = shown
+		task.wait(0.025)
+	end
+	line.MaxVisibleGraphemes = -1
+
+	task.wait(math.max(payload.duration - length * 0.025, 1))
+	if dialogueToken == token then
+		dialogue.Visible = false
+	end
+end
+
+local function resetScreen()
+	dialogueToken += 1
+	dialogue.Visible = false
+	note.Visible = false
+	objective.Text = ""
+	overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	overlay.BackgroundTransparency = 1
+	endingTitle.TextTransparency = 1
+	endingSubtitle.TextTransparency = 1
+end
+
+local effects = {}
+
+-- Elkapott: gyors elsötétülés, majd lassan visszajön a kép.
+function effects.Caught()
+	overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	tween(overlay, 0.3, { BackgroundTransparency = 0 })
+	task.wait(1.6)
+	tween(overlay, 1.2, { BackgroundTransparency = 1 })
+end
+
+-- Rövid piros villanás a furcsa pillanatoknál.
+function effects.Glitch()
+	overlay.BackgroundColor3 = Color3.fromRGB(120, 0, 30)
+	overlay.BackgroundTransparency = 0.5
+	task.wait(0.08)
+	overlay.BackgroundTransparency = 1
+	task.wait(0.06)
+	overlay.BackgroundTransparency = 0.7
+	task.wait(0.05)
+	overlay.BackgroundTransparency = 1
+	overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+end
+
+storyEvent.OnClientEvent:Connect(function(kind: string, payload: any)
+	if kind == "Dialogue" then
+		showDialogue(payload)
+	elseif kind == "Objective" then
+		objective.Text = if payload == "" then "" else "> " .. payload
+	elseif kind == "Note" then
+		noteText.Text = payload
+		note.Visible = true
+	elseif kind == "Effect" then
+		local effect = effects[payload]
+		if effect then
+			effect()
+		end
+	elseif kind == "Ending" then
+		dialogueToken += 1
+		dialogue.Visible = false
+		note.Visible = false
+		endingTitle.Text = payload.Title
+		endingSubtitle.Text = payload.Subtitle
+		overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		tween(overlay, 1.5, { BackgroundTransparency = 0 })
+		task.wait(1.5)
+		tween(endingTitle, 1, { TextTransparency = 0 })
+		task.wait(1)
+		tween(endingSubtitle, 1, { TextTransparency = 0 })
+	elseif kind == "Reset" then
+		resetScreen()
+	end
+end)
+]]></ProtectedString>
+          </Properties>
+        </Item>
+      </Item>
+    </Item>
+  </Item>
+</roblox>

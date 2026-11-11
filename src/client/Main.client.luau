@@ -146,6 +146,15 @@ UserInputService.InputBegan:Connect(function(input)
 end)
 
 -- Teljes képernyős réteg: elsötétüléshez, villanáshoz, záróképhez
+-- Közelségjelző: üldözés közben vörösen lüktet a kép, ha Lumi a közelben van
+local danger = Instance.new("Frame")
+danger.Name = "Danger"
+danger.Size = UDim2.new(1, 0, 1, 0)
+danger.BackgroundColor3 = Color3.fromRGB(120, 0, 25)
+danger.BackgroundTransparency = 1
+danger.ZIndex = 0
+danger.Parent = gui
+
 local overlay = Instance.new("Frame")
 overlay.Name = "Overlay"
 overlay.Size = UDim2.new(1, 0, 1, 0)
@@ -234,6 +243,14 @@ function effects.Caught()
 end
 
 -- Rövid piros villanás a furcsa pillanatoknál.
+-- A fejezet végi hosszú elsötétülés: közben a szerver visszarendezi a házat.
+function effects.Blackout()
+	overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	tween(overlay, 1, { BackgroundTransparency = 0 })
+	task.wait(4.2)
+	tween(overlay, 1.5, { BackgroundTransparency = 1 })
+end
+
 function effects.Glitch()
 	overlay.BackgroundColor3 = Color3.fromRGB(120, 0, 30)
 	overlay.BackgroundTransparency = 0.5
@@ -274,5 +291,27 @@ storyEvent.OnClientEvent:Connect(function(kind: string, payload: any)
 		tween(endingSubtitle, 1, { TextTransparency = 0 })
 	elseif kind == "Reset" then
 		resetScreen()
+	end
+end)
+
+-- Közelségjelző frissítése: 30 studnál kezd halványan látszani, 6 studnál a legerősebb.
+task.spawn(function()
+	while true do
+		task.wait(0.1)
+		local target = 1
+		if workspace:GetAttribute("Hunting") then
+			local map = workspace:FindFirstChild("Map")
+			local lumi = map and map:FindFirstChild(Config.Companion.Name)
+			local lumiRoot = lumi and lumi:FindFirstChild("HumanoidRootPart")
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			if lumiRoot and lumiRoot:IsA("BasePart") and root and root:IsA("BasePart") then
+				local distance = (lumiRoot.Position - root.Position).Magnitude
+				local closeness = math.clamp(1 - (distance - 6) / 24, 0, 1)
+				local pulse = 0.75 + 0.25 * math.sin(os.clock() * 7)
+				target = 1 - closeness * pulse * 0.45
+			end
+		end
+		danger.BackgroundTransparency += (target - danger.BackgroundTransparency) * 0.35
 	end
 end)

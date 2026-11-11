@@ -35,6 +35,7 @@ a felfelé nyíl és az Enter. A pályát érdemes elmenteni (Ctrl+S), hogy a fr
 | 3 | Plüssök | 4 plüss megkeresése; közben jönnek az első furcsaságok |
 | 4 | Zenedoboz | A zenedoboz felhúzása, mellette egy korábbi vendég cetlije |
 | 5 | Szökés | A dallam elhallgat, Lumi üldöz: kulcs a párna alól, raktár, bejárati kulcs, ajtó |
+| 6 | Cliffhanger | Az ajtó mögött újra az előszoba vár, a lábtörlőn egy plüss a te neveddel |
 
 Az üldözés alatt a kis zenedobozok felhúzása pár másodpercre megnyugtatja Lumit.
 Ha elkap, nem halsz meg, hanem „felébredsz" az előszobában.

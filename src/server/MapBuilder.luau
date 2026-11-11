@@ -164,16 +164,19 @@ local function ceilingLamp(parent: Instance, x: number, z: number): Lamp
 	return addLight(shade, 24, 0.45)
 end
 
-local function plushie(parent: Instance, position: Vector3, color: Color3): Part
+-- facing: 1 = dél felé néz (alap), -1 = észak felé
+local function plushie(parent: Instance, position: Vector3, color: Color3, facing: number?): Part
 	local body = box(parent, "Plushie", Vector3.new(1.5, 2, 1.5), position, color, Enum.Material.Fabric)
 	local head = deco(body, "Head", Vector3.new(1.3, 1.2, 1.3), position + Vector3.new(0, 1.5, 0), color, Enum.Material.Fabric)
 	-- fülek és szemek, hogy plüssnek látsszon, ne kockának
 	for _, direction in { -1, 1 } do
 		deco(head, "Ear", Vector3.new(0.4, 0.5, 0.3), position + Vector3.new(direction * 0.45, 2.3, 0), color, Enum.Material.Fabric)
-		deco(head, "Eye", Vector3.new(0.18, 0.18, 0.1), position + Vector3.new(direction * 0.3, 1.6, 0.66), Color3.fromRGB(30, 25, 30))
+		deco(head, "Eye", Vector3.new(0.18, 0.18, 0.1), position + Vector3.new(direction * 0.3, 1.6, 0.66 * (facing or 1)), Color3.fromRGB(30, 25, 30))
 	end
 	return body
 end
+
+MapBuilder.plushie = plushie
 
 function MapBuilder.build(): Map
 	local folder = Instance.new("Folder")

@@ -10,6 +10,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Story = require(Shared:WaitForChild("Story"))
+local MapBuilder = require(script.Parent:WaitForChild("MapBuilder"))
+
+local LAMP_COLOR = Color3.fromRGB(255, 220, 170)
 
 local Director = {}
 
@@ -131,6 +134,16 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 		end
 	end
 
+	local function closeDoor(door: BasePart)
+		door.CanCollide = true
+		door.Transparency = 0
+		for _, child in door:GetDescendants() do
+			if child:IsA("BasePart") then
+				child.Transparency = 0
+			end
+		end
+	end
+
 	-- Színhangulat: meleg és telt, amíg kedves; hideg és fakó, amikor üldöz.
 	local function colorGrade(saturation: number, contrast: number, tint: Color3)
 		local effect = Lighting:FindFirstChild("StoryColor")
@@ -152,6 +165,15 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 		Lighting.ExposureCompensation = -0.4
 		Lighting.OutdoorAmbient = Color3.fromRGB(30, 30, 45)
 		Lighting.FogEnd = 100000
+		-- Ha az üldözés után állunk vissza, a lámpák is kapják vissza a meleg fényüket.
+		for _, lamp in map.lamps do
+			local base = lamp.light:GetAttribute("BaseBrightness")
+			if base then
+				lamp.light.Brightness = base
+			end
+			lamp.light.Color = LAMP_COLOR
+			lamp.part.Color = LAMP_COLOR
+		end
 	end
 
 	local function setDarkLighting()
@@ -160,8 +182,12 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 		Lighting.OutdoorAmbient = Color3.fromRGB(5, 5, 10)
 		Lighting.FogColor = Color3.fromRGB(0, 0, 0)
 		Lighting.FogEnd = 70
+		Lighting.ExposureCompensation = -0.7
 		for _, lamp in map.lamps do
-			lamp.light.Brightness = 0.12
+			if lamp.light:GetAttribute("BaseBrightness") == nil then
+				lamp.light:SetAttribute("BaseBrightness", lamp.light.Brightness)
+			end
+			lamp.light.Brightness = 0.1
 			lamp.light.Color = Color3.fromRGB(255, 70, 90)
 			lamp.part.Color = Color3.fromRGB(120, 30, 45)
 		end
@@ -173,8 +199,8 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 		if root and not root:FindFirstChild("HuntLight") then
 			local light = Instance.new("PointLight")
 			light.Name = "HuntLight"
-			light.Range = 20
-			light.Brightness = 1
+			light.Range = 18
+			light.Brightness = 0.7
 			light.Color = Color3.fromRGB(230, 235, 255)
 			light.Parent = root
 		end
@@ -210,6 +236,7 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 	---------------------------------------------------------------------------
 
 	setCozyLighting()
+	workspace:SetAttribute("Hunting", false)
 
 	for _, player in Players:GetPlayers() do
 		setupPlayer(player)
@@ -306,6 +333,7 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 	say(Story.HuntStart[1])
 
 	hunting = true
+	workspace:SetAttribute("Hunting", true) -- a kliens ebből tudja, hogy mutassa a közelségjelzőt
 	setDarkLighting()
 	playSound(Config.Sounds.LightsOut, map.folder)
 	playSound(Config.Sounds.Ambience, map.folder, true)
@@ -396,6 +424,16 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 
 	companion:calm(Config.HuntGraceTime) -- rövid előny, utána magától üldözni kezd
 
+	-- Üldözés közben időnként megszólal.
+	task.spawn(function()
+		while hunting do
+			task.wait(math.random(10, 16))
+			if hunting and companion.mode == "Hunt" then
+				remark(Story.Taunts[math.random(#Story.Taunts)])
+			end
+		end
+	end)
+
 	escaped.Event:Wait()
 	escaped:Destroy()
 
@@ -404,10 +442,56 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 	---------------------------------------------------------------------------
 
 	hunting = false
+	workspace:SetAttribute("Hunting", false)
 	companion.onCatch = nil
 	companion:setMode("Idle")
 	openDoor(map.frontDoor)
 	setObjective("")
+	sayAll(Story.Escape)
+
+	-- Cliffhanger: a kép elsötétül, és mire visszajön, minden olyan, mint érkezéskor.
+	storyEvent:FireAllClients("Effect", "Blackout")
+	task.wait(1.2) -- eddigre a képernyő már fekete, a játékos nem látja az átrendezést
+
+	closeDoor(map.frontDoor)
+	closeDoor(map.storageDoor)
+	setCozyLighting()
+	for _, sound in sounds do
+		sound:Stop()
+	end
+	companion.model:PivotTo(map.companionStart)
+
+	-- Mindenki visszakerül az előszobába, és kap egy plüsst a saját nevével a lábtörlőn.
+	local players = Players:GetPlayers()
+	for index, player in players do
+		local offset = (index - (#players + 1) / 2) * 2.4
+		local character = player.Character
+		if character then
+			local light = character:FindFirstChild("HuntLight", true)
+			if light then
+				light:Destroy()
+			end
+			character:PivotTo(CFrame.new(map.spawn.Position + Vector3.new(offset, 4, 0)))
+		end
+
+		local plush = MapBuilder.plushie(map.folder, Vector3.new(offset, 1, 26.5), Color3.fromRGB(226, 228, 242), -1)
+		local tag = Instance.new("BillboardGui")
+		tag.Size = UDim2.new(0, 130, 0, 30)
+		tag.StudsOffset = Vector3.new(0, 2.8, 0)
+		tag.MaxDistance = 40
+		tag.Parent = plush
+		local name = Instance.new("TextLabel")
+		name.Size = UDim2.new(1, 0, 1, 0)
+		name.BackgroundColor3 = Color3.fromRGB(250, 245, 230)
+		name.TextColor3 = Color3.fromRGB(50, 40, 40)
+		name.Font = Enum.Font.IndieFlower
+		name.TextSize = 22
+		name.Text = player.DisplayName
+		name.Parent = tag
+	end
+
+	task.wait(3.5)
+	sayAll(Story.Cliffhanger)
 	storyEvent:FireAllClients("Ending", Story.Ending)
 	task.wait(Config.EndingTime)
 

@@ -64,9 +64,29 @@ Story.Objectives = {
 	Escape = "Escape through the front door",
 }
 
+-- Üldözés közben Lumi időnként megszólal (véletlenszerűen egy ezek közül).
+Story.Taunts = {
+	{ "Lumi", "Where are you going? The tea is getting cold." },
+	{ "Lumi", "I can hear you, you know." },
+	{ "Lumi", "Don't hide. Hiding is rude." },
+	{ "Lumi", "Everyone leaves. You won't. Right?" },
+	{ "Lumi", "Come back. Please." },
+}
+
+Story.Escape = {
+	{ "", "The lock clicks. The door swings open into cold night air." },
+}
+
+-- A fejezet vége: az ajtó mögött újra az előszoba van.
+Story.Cliffhanger = {
+	{ "", "...You are standing in the hallway. The front door is closed." },
+	{ "", "A new plushie sits on the doormat. The name tag has your name on it." },
+	{ "Lumi", "Welcome back! You're just in time for tea." },
+}
+
 Story.Ending = {
-	Title = "You got out.",
-	Subtitle = "Chapter 1 complete - to be continued",
+	Title = "Silvertune",
+	Subtitle = "Chapter 1: The Guest - to be continued",
 }
 
 return Story

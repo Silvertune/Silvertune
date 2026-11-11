@@ -21,7 +21,7 @@ local MapBuilder = {}
 local WALL_HEIGHT = 10
 local WALL_THICKNESS = 1
 
-local WALL_COLOR = Color3.fromRGB(245, 225, 220)
+local WALL_COLOR = Color3.fromRGB(214, 180, 178)
 local FLOOR_COLOR = Color3.fromRGB(170, 120, 90)
 local FURNITURE_COLOR = Color3.fromRGB(215, 190, 170)
 local LAMP_COLOR = Color3.fromRGB(255, 220, 170)
@@ -86,11 +86,11 @@ local function addPrompt(part: Part, actionText: string, objectText: string): Pr
 end
 
 local function lamp(parent: Instance, x: number, z: number): Lamp
-	local part = box(parent, "Lamp", Vector3.new(2, 0.5, 2), Vector3.new(x, WALL_HEIGHT - 0.25, z), LAMP_COLOR, Enum.Material.Neon)
+	local part = box(parent, "Lamp", Vector3.new(2, 0.5, 2), Vector3.new(x, WALL_HEIGHT - 1.5, z), LAMP_COLOR, Enum.Material.Neon)
 	part.CanCollide = false
 	local light = Instance.new("PointLight")
-	light.Range = 30
-	light.Brightness = 1.2
+	light.Range = 24
+	light.Brightness = 0.45
 	light.Color = LAMP_COLOR
 	light.Parent = part
 	return { part = part, light = light }

@@ -10,6 +10,12 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local storyEvent = ReplicatedStorage:WaitForChild("StoryEvent") :: RemoteEvent
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+-- Belső nézet: a kliensen is beállítjuk, mert a szerverről nem mindig érvényesül.
+if Config.FirstPerson then
+	player.CameraMode = Enum.CameraMode.LockFirstPerson
+end
 
 local FONT = Enum.Font.GothamMedium
 local PINK = Color3.fromRGB(255, 170, 200)
@@ -43,12 +49,11 @@ local function roundCorners(parent: Instance, radius: number)
 	corner.Parent = parent
 end
 
--- Aktuális cél (bal felül)
-local objective = label(gui, "Objective", 20)
-objective.AnchorPoint = Vector2.new(0, 0)
-objective.Position = UDim2.new(0, 20, 0, 60)
-objective.Size = UDim2.new(0.5, 0, 0, 30)
-objective.TextXAlignment = Enum.TextXAlignment.Left
+-- Aktuális cél (felül középen, hogy ne takarja a chat)
+local objective = label(gui, "Objective", 22)
+objective.AnchorPoint = Vector2.new(0.5, 0)
+objective.Position = UDim2.new(0.5, 0, 0, 16)
+objective.Size = UDim2.new(0.4, 0, 0, 30)
 objective.TextStrokeTransparency = 0.5
 
 -- Párbeszéddoboz (alul középen)

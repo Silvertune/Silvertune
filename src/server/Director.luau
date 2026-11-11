@@ -123,7 +123,8 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 	local function setCozyLighting()
 		Lighting.ClockTime = 0
 		Lighting.Brightness = 1
-		Lighting.Ambient = Color3.fromRGB(80, 70, 78)
+		Lighting.Ambient = Color3.fromRGB(42, 36, 44)
+		Lighting.ExposureCompensation = -0.4
 		Lighting.OutdoorAmbient = Color3.fromRGB(30, 30, 45)
 		Lighting.FogEnd = 100000
 	end
@@ -134,7 +135,7 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 		Lighting.FogColor = Color3.fromRGB(0, 0, 0)
 		Lighting.FogEnd = 70
 		for _, lamp in map.lamps do
-			lamp.light.Brightness = 0.25
+			lamp.light.Brightness = 0.12
 			lamp.light.Color = Color3.fromRGB(255, 70, 90)
 			lamp.part.Color = Color3.fromRGB(120, 30, 45)
 		end

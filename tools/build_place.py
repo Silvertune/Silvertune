@@ -4,15 +4,18 @@
 Használat (a repó gyökeréből):
     python3 tools/build_place.py
 
-Az eredmény: Silvertune.rbxlx. Ugyanazt a felépítést adja, mint a
+Az eredmény: Silvertune.rbxlx és Silvertune.bundle.json. Ugyanazt a felépítést adja, mint a
 default.project.json Rojo-val, csak semmit nem kell hozzá telepíteni.
 """
 
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 from xml.sax.saxutils import escape
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "Silvertune.rbxlx"
+BUNDLE = ROOT / "Silvertune.bundle.json"
 
 # (szolgáltatások láncolata, mappa neve a játékban, forrásmappa)
 MOUNTS = [
@@ -39,15 +42,18 @@ def open_item(class_name: str, name: str, depth: int) -> str:
     )
 
 
-def script_item(path: Path, depth: int) -> str:
+def classify(path: Path) -> tuple[str, str]:
     # A fájlnév végződése dönti el a típust, ugyanúgy, mint Rojo-nál.
     stem = path.name[: -len(".luau")]
     if stem.endswith(".server"):
-        class_name, name = "Script", stem[: -len(".server")]
-    elif stem.endswith(".client"):
-        class_name, name = "LocalScript", stem[: -len(".client")]
-    else:
-        class_name, name = "ModuleScript", stem
+        return "Script", stem[: -len(".server")]
+    if stem.endswith(".client"):
+        return "LocalScript", stem[: -len(".client")]
+    return "ModuleScript", stem
+
+
+def script_item(path: Path, depth: int) -> str:
+    class_name, name = classify(path)
 
     source = path.read_text(encoding="utf-8").replace("]]>", "]]]]><![CDATA[>")
     pad = "  " * depth
@@ -89,6 +95,27 @@ def main() -> None:
 
     parts.append("</roblox>\n")
     OUTPUT.write_text("".join(parts), encoding="utf-8")
+
+    # Ugyanez egyetlen JSON-ben: ezt tölti le a Studio-beli frissítő (tools/studio_update.luau).
+    bundle = {
+        "builtAt": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "mounts": [
+            {
+                "services": services,
+                "folder": folder_name,
+                "scripts": [
+                    {
+                        "class": classify(path)[0],
+                        "name": classify(path)[1],
+                        "source": path.read_text(encoding="utf-8"),
+                    }
+                    for path in sorted(source_dir.glob("*.luau"))
+                ],
+            }
+            for services, folder_name, source_dir in MOUNTS
+        ],
+    }
+    BUNDLE.write_text(json.dumps(bundle, ensure_ascii=False), encoding="utf-8")
     print(f"{OUTPUT.name}: {count} szkript becsomagolva")
 
 

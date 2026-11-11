@@ -14,6 +14,18 @@ ki kell jutnod a házból.
 
 A ház indításkor épül fel, ezért szerkesztő nézetben üres a pálya.
 
+## Frissítés újraletöltés nélkül
+
+Ha a pálya már nyitva van Studióban, a legfrissebb szkripteket egy paranccsal be lehet húzni.
+Állítsd le a játékot, kattints alul a parancssorba (Command Bar), illeszd be ezt az egy sort, és nyomj Entert:
+
+```lua
+local h=game:GetService("HttpService") h.HttpEnabled=true loadstring(h:RequestAsync({Url="https://api.github.com/repos/Silvertune/Silvertune/contents/tools/studio_update.luau?ref=claude/eager-fermi-ru4zch",Headers={Accept="application/vnd.github.raw"}}).Body)()
+```
+
+Az Output ablakban a „Silvertune frissítve" sor jelzi, hogy sikerült. Legközelebb elég a parancssorban
+a felfelé nyíl és az Enter. A pályát érdemes elmenteni (Ctrl+S), hogy a frissített állapot megmaradjon.
+
 ## Az első fejezet menete
 
 | # | Rész | Mit csinál a játékos |

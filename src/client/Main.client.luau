@@ -146,6 +146,16 @@ UserInputService.InputBegan:Connect(function(input)
 end)
 
 -- Teljes képernyős réteg: elsötétüléshez, villanáshoz, záróképhez
+-- Változatjelző (jobb alul, halványan): ebből látszik, hogy a frissítés megérkezett-e.
+local build = label(gui, "Build", 14)
+build.AnchorPoint = Vector2.new(1, 1)
+build.Position = UDim2.new(1, -12, 1, -8)
+build.Size = UDim2.new(0, 260, 0, 18)
+build.TextXAlignment = Enum.TextXAlignment.Right
+build.TextTransparency = 0.6
+local buildTime = ReplicatedStorage:GetAttribute("SilvertuneBuild")
+build.Text = if buildTime then "build " .. tostring(buildTime) else ""
+
 -- Közelségjelző: üldözés közben vörösen lüktet a kép, ha Lumi a közelben van
 local danger = Instance.new("Frame")
 danger.Name = "Danger"

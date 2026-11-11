@@ -61,4 +61,7 @@ for _, mount in bundle.mounts do
 	end
 end
 
+-- A játékban jobb alul ez a felirat mutatja, melyik változat fut.
+game:GetService("ReplicatedStorage"):SetAttribute("SilvertuneBuild", bundle.builtAt)
+
 print(string.format("Silvertune frissítve: %d szkript (%s). Mehet a Play!", count, bundle.builtAt))

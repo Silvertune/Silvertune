@@ -690,6 +690,7 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 		Lighting.Ambient = Color3.fromRGB(42, 36, 44)
 		Lighting.ExposureCompensation = -0.4
 		Lighting.OutdoorAmbient = Color3.fromRGB(30, 30, 45)
+		Lighting.FogStart = 0
 		Lighting.FogEnd = 100000
 		-- Ha az üldözés után állunk vissza, a lámpák is kapják vissza a meleg fényüket.
 		for _, lamp in map.lamps do
@@ -704,16 +705,17 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 
 	local function setDarkLighting()
 		colorGrade(-0.45, 0.15, Color3.fromRGB(205, 215, 255))
-		Lighting.Ambient = Color3.fromRGB(10, 10, 16)
-		Lighting.OutdoorAmbient = Color3.fromRGB(5, 5, 10)
+		Lighting.Ambient = Color3.fromRGB(4, 4, 8)
+		Lighting.OutdoorAmbient = Color3.fromRGB(2, 2, 5)
 		Lighting.FogColor = Color3.fromRGB(0, 0, 0)
-		Lighting.FogEnd = 70
-		Lighting.ExposureCompensation = -0.7
+		Lighting.FogStart = 8
+		Lighting.FogEnd = 45
+		Lighting.ExposureCompensation = -1.1
 		for _, lamp in map.lamps do
 			if lamp.light:GetAttribute("BaseBrightness") == nil then
 				lamp.light:SetAttribute("BaseBrightness", lamp.light.Brightness)
 			end
-			lamp.light.Brightness = 0.1
+			lamp.light.Brightness = 0.05
 			lamp.light.Color = Color3.fromRGB(255, 70, 90)
 			lamp.part.Color = Color3.fromRGB(120, 30, 45)
 		end
@@ -725,8 +727,8 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 		if root and not root:FindFirstChild("HuntLight") then
 			local light = Instance.new("PointLight")
 			light.Name = "HuntLight"
-			light.Range = 18
-			light.Brightness = 0.7
+			light.Range = 14
+			light.Brightness = 0.6
 			light.Color = Color3.fromRGB(230, 235, 255)
 			light.Parent = root
 		end
@@ -1700,6 +1702,16 @@ UserInputService.InputBegan:Connect(function(input)
 end)
 
 -- Teljes képernyős réteg: elsötétüléshez, villanáshoz, záróképhez
+-- Változatjelző (jobb alul, halványan): ebből látszik, hogy a frissítés megérkezett-e.
+local build = label(gui, "Build", 14)
+build.AnchorPoint = Vector2.new(1, 1)
+build.Position = UDim2.new(1, -12, 1, -8)
+build.Size = UDim2.new(0, 260, 0, 18)
+build.TextXAlignment = Enum.TextXAlignment.Right
+build.TextTransparency = 0.6
+local buildTime = ReplicatedStorage:GetAttribute("SilvertuneBuild")
+build.Text = if buildTime then "build " .. tostring(buildTime) else ""
+
 -- Közelségjelző: üldözés közben vörösen lüktet a kép, ha Lumi a közelben van
 local danger = Instance.new("Frame")
 danger.Name = "Danger"

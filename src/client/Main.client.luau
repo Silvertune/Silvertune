@@ -6,6 +6,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -125,11 +126,23 @@ closeNote.BackgroundColor3 = Color3.fromRGB(60, 50, 50)
 closeNote.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeNote.Font = FONT
 closeNote.TextSize = 20
-closeNote.Text = "Close"
+closeNote.Text = "Close [X]"
+-- Belső nézetben az egér zárolva van; a Modal gomb felszabadítja, amíg a cetli látszik.
+closeNote.Modal = true
 closeNote.Parent = note
 roundCorners(closeNote, 8)
 closeNote.Activated:Connect(function()
 	note.Visible = false
+end)
+-- Billentyűvel is bezárható (X vagy Esc helyett Backspace), kontrolleren a B gombbal.
+UserInputService.InputBegan:Connect(function(input)
+	if not note.Visible then
+		return
+	end
+	local key = input.KeyCode
+	if key == Enum.KeyCode.X or key == Enum.KeyCode.Backspace or key == Enum.KeyCode.ButtonB then
+		note.Visible = false
+	end
 end)
 
 -- Teljes képernyős réteg: elsötétüléshez, villanáshoz, záróképhez

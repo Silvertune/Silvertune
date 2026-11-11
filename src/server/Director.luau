@@ -120,7 +120,32 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 		end)
 	end
 
+	-- Ajtó "kinyitása": eltűnik a kilinccsel együtt, és át lehet menni rajta.
+	local function openDoor(door: BasePart)
+		door.CanCollide = false
+		door.Transparency = 1
+		for _, child in door:GetDescendants() do
+			if child:IsA("BasePart") then
+				child.Transparency = 1
+			end
+		end
+	end
+
+	-- Színhangulat: meleg és telt, amíg kedves; hideg és fakó, amikor üldöz.
+	local function colorGrade(saturation: number, contrast: number, tint: Color3)
+		local effect = Lighting:FindFirstChild("StoryColor")
+		if not effect then
+			effect = Instance.new("ColorCorrectionEffect")
+			effect.Name = "StoryColor"
+			effect.Parent = Lighting
+		end
+		effect.Saturation = saturation
+		effect.Contrast = contrast
+		effect.TintColor = tint
+	end
+
 	local function setCozyLighting()
+		colorGrade(0.1, 0.05, Color3.fromRGB(255, 244, 238))
 		Lighting.ClockTime = 0
 		Lighting.Brightness = 1
 		Lighting.Ambient = Color3.fromRGB(42, 36, 44)
@@ -130,6 +155,7 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 	end
 
 	local function setDarkLighting()
+		colorGrade(-0.45, 0.15, Color3.fromRGB(205, 215, 255))
 		Lighting.Ambient = Color3.fromRGB(10, 10, 16)
 		Lighting.OutdoorAmbient = Color3.fromRGB(5, 5, 10)
 		Lighting.FogColor = Color3.fromRGB(0, 0, 0)
@@ -215,8 +241,7 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 	track(storagePrompt.Triggered:Connect(function(player)
 		if hasStorageKey then
 			storagePrompt.Enabled = false
-			map.storageDoor.CanCollide = false
-			map.storageDoor.Transparency = 1
+			openDoor(map.storageDoor)
 			remark(Story.StorageOpened)
 			setObjective(Story.Objectives.FrontKey)
 		elseif os.clock() - lastStorageRemark > 4 then
@@ -381,8 +406,7 @@ function Director.run(map: any, companion: any, storyEvent: RemoteEvent)
 	hunting = false
 	companion.onCatch = nil
 	companion:setMode("Idle")
-	map.frontDoor.CanCollide = false
-	map.frontDoor.Transparency = 1
+	openDoor(map.frontDoor)
 	setObjective("")
 	storyEvent:FireAllClients("Ending", Story.Ending)
 	task.wait(Config.EndingTime)

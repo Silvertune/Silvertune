@@ -57,6 +57,67 @@ local function buildFallbackRig(): Model
 	return model
 end
 
+-- Egy kis doboz hozzáhegesztve a karakter egyik testrészéhez (haj, masni, szoknya).
+local function attach(model: Model, base: BasePart, name: string, size: Vector3, offset: Vector3, color: Color3)
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Size = size
+	part.Color = color
+	part.Material = Enum.Material.SmoothPlastic
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	part.Massless = true
+	part.CFrame = base.CFrame * CFrame.new(offset)
+	part.Parent = model
+
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = base
+	weld.Part1 = part
+	weld.Parent = part
+end
+
+-- Beépített kinézet: ezüst haj két copffal, masni és szoknya, katalógus nélkül.
+-- A karakter -Z irányba néz, tehát a +Z a háta.
+local function decorate(model: Model)
+	local settings = Config.Companion
+	local hair = settings.HairColor
+	local accent = settings.AccentColor
+
+	local head = model:FindFirstChild("Head")
+	if head and head:IsA("BasePart") then
+		local s = head.Size
+		attach(model, head, "HairTop", Vector3.new(s.X + 0.3, 0.4, s.Z + 0.3), Vector3.new(0, s.Y / 2 + 0.05, 0), hair)
+		attach(model, head, "HairBack", Vector3.new(s.X + 0.3, s.Y + 1.4, 0.3), Vector3.new(0, -0.55, s.Z / 2 + 0.1), hair)
+		attach(model, head, "HairBangs", Vector3.new(s.X + 0.3, 0.35, 0.2), Vector3.new(0, s.Y / 2 - 0.2, -(s.Z / 2 + 0.05)), hair)
+		for _, side in { -1, 1 } do
+			attach(model, head, "HairSide", Vector3.new(0.25, s.Y + 0.3, s.Z * 0.7), Vector3.new(side * (s.X / 2 + 0.08), -0.05, s.Z * 0.2), hair)
+			attach(model, head, "HairTie", Vector3.new(0.55, 0.3, 0.55), Vector3.new(side * (s.X / 2 + 0.4), 0.2, 0.2), accent)
+			attach(model, head, "Ponytail", Vector3.new(0.45, 2.3, 0.45), Vector3.new(side * (s.X / 2 + 0.4), -1.05, 0.2), hair)
+			attach(model, head, "BowLoop", Vector3.new(0.55, 0.4, 0.2), Vector3.new(side * 0.35, s.Y / 2 + 0.45, 0), accent)
+		end
+		attach(model, head, "BowKnot", Vector3.new(0.25, 0.3, 0.25), Vector3.new(0, s.Y / 2 + 0.42, 0), accent)
+	end
+
+	local hips = model:FindFirstChild("LowerTorso")
+	if hips and hips:IsA("BasePart") then
+		local s = hips.Size
+		attach(model, hips, "Skirt", Vector3.new(s.X + 0.5, 0.9, s.Z + 0.5), Vector3.new(0, -0.3, 0), settings.DressColor)
+		attach(model, hips, "SkirtHem", Vector3.new(s.X + 0.7, 0.2, s.Z + 0.7), Vector3.new(0, -0.8, 0), Color3.fromRGB(255, 255, 255))
+	end
+
+	local chest = model:FindFirstChild("UpperTorso")
+	if chest and chest:IsA("BasePart") then
+		local s = chest.Size
+		for _, side in { -1, 1 } do
+			attach(model, chest, "RibbonLoop", Vector3.new(0.4, 0.3, 0.12), Vector3.new(side * 0.28, s.Y / 2 - 0.3, -(s.Z / 2 + 0.04)), accent)
+		end
+		attach(model, chest, "RibbonKnot", Vector3.new(0.18, 0.22, 0.16), Vector3.new(0, s.Y / 2 - 0.3, -(s.Z / 2 + 0.05)), accent)
+	end
+end
+
 local function buildRig(): Model
 	local settings = Config.Companion
 
@@ -97,6 +158,10 @@ function Companion.new(startCFrame: CFrame, parent: Instance)
 	local animate = model:FindFirstChild("Animate")
 	if animate then
 		animate:Destroy()
+	end
+
+	if Config.Companion.BuiltInLook then
+		decorate(model)
 	end
 
 	model:PivotTo(startCFrame)

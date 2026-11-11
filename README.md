@@ -12,7 +12,7 @@ ki kell jutnod a házból.
 2. Töltsd le a repóból a `Silvertune.rbxlx` fájlt, és nyisd meg Studióban.
 3. Nyomd meg a **Play** gombot (F5).
 
-A ház egyszerű dobozokból épül fel indításkor, ezért szerkesztő nézetben üres a pálya.
+A ház indításkor épül fel, ezért szerkesztő nézetben üres a pálya.
 
 ## Az első fejezet menete
 
@@ -41,9 +41,9 @@ Ha elkap, nem halsz meg, hanem „felébredsz" az előszobában.
 
 ## Ami még helykitöltő
 
-- **Lumi kinézete:** sima próbababa. A `Config.luau`-ban adhatsz meg haj-, arc- és ruha-azonosítókat a Roblox katalógusból.
+- **Lumi kinézete:** dobozokból épített ezüst haj, masni és szoknya. A `Config.luau`-ban adhatsz meg helyette haj-, arc- és ruha-azonosítókat a Roblox katalógusból (ekkor a `BuiltInLook` legyen `false`).
 - **Hangok:** nincs beállítva egy sem. A `Config.luau` `Sounds` részébe kerülnek az azonosítók.
-- **A ház:** szürke dobozok, később Studióban lecserélhető rendes modellekre.
+- **A ház:** a bútorok és díszek egyszerű dobozokból állnak, később Studióban lecserélhetők rendes modellekre.
 
 ## Szerkesztés után
 

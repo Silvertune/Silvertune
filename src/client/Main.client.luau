@@ -53,7 +53,17 @@ end
 local objective = label(gui, "Objective", 22)
 objective.AnchorPoint = Vector2.new(0.5, 0)
 objective.Position = UDim2.new(0.5, 0, 0, 16)
-objective.Size = UDim2.new(0.4, 0, 0, 30)
+objective.Size = UDim2.new(0, 0, 0, 34)
+objective.AutomaticSize = Enum.AutomaticSize.X
+objective.TextWrapped = false
+objective.BackgroundColor3 = Color3.fromRGB(20, 16, 22)
+objective.BackgroundTransparency = 0.35
+objective.Visible = false
+roundCorners(objective, 17)
+local objectivePadding = Instance.new("UIPadding")
+objectivePadding.PaddingLeft = UDim.new(0, 16)
+objectivePadding.PaddingRight = UDim.new(0, 16)
+objectivePadding.Parent = objective
 objective.TextStrokeTransparency = 0.5
 
 -- Párbeszéddoboz (alul középen)
@@ -66,7 +76,12 @@ dialogue.BackgroundColor3 = Color3.fromRGB(20, 16, 22)
 dialogue.BackgroundTransparency = 0.25
 dialogue.Visible = false
 dialogue.Parent = gui
-roundCorners(dialogue, 12)
+roundCorners(dialogue, 14)
+local dialogueStroke = Instance.new("UIStroke")
+dialogueStroke.Color = PINK
+dialogueStroke.Thickness = 2
+dialogueStroke.Transparency = 0.3
+dialogueStroke.Parent = dialogue
 
 local speaker = label(dialogue, "Speaker", 20)
 speaker.Position = UDim2.new(0, 18, 0, 10)
@@ -188,6 +203,7 @@ local function resetScreen()
 	dialogue.Visible = false
 	note.Visible = false
 	objective.Text = ""
+	objective.Visible = false
 	overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 	overlay.BackgroundTransparency = 1
 	endingTitle.TextTransparency = 1
@@ -221,7 +237,8 @@ storyEvent.OnClientEvent:Connect(function(kind: string, payload: any)
 	if kind == "Dialogue" then
 		showDialogue(payload)
 	elseif kind == "Objective" then
-		objective.Text = if payload == "" then "" else "> " .. payload
+		objective.Text = payload
+		objective.Visible = payload ~= ""
 	elseif kind == "Note" then
 		noteText.Text = payload
 		note.Visible = true
